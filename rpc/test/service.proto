@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package test;
+option go_package = "rpc/test;test";
+
+service test {
+  rpc getRpc(getRpcRequest) returns (getRpcResponse);
+  rpc postRpc(postRpcRequest) returns (postRpcResponse);
+}
+
+message getRpcRequest {
+  string id_in_request = 1;
+}
+
+message getRpcResponse {
+  string response = 1;
+}
+
+message postRpcRequest {
+  string request_data_1 = 1;
+  string request_data_2 = 2;
+}
+
+message postRpcResponse {
+  string response = 1;
+}
