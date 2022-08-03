@@ -1,0 +1,61 @@
+name: "dependabot-alert"
+
+on:
+  pull_request:
+    types: [opened]
+
+jobs:
+  fetch-metadata:
+    name: 'fetching-metadata'
+    permissions:
+      pull-requests: write  # for dependabot/fetch-metadata to create a pr with updated dependencies
+    runs-on: [self-hosted]
+    continue-on-error: false
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    steps:
+      - name: fetch dependabot metadata
+        id: dependabot-metadata
+        uses: dependabot/fetch-metadata@v1.3.3
+        with:
+          alert-lookup: true
+          compat-lookup: true
+          github-token: "${{ secrets.GIT_TOKEN }}"
+  print-dependabot-metadata:
+    name: 'print-dependabot-metadata'
+    runs-on: [self-hosted]
+    needs: [fetch-metadata]
+    continue-on-error: false
+    steps:
+      - name: 'print-dependency-type-value'
+        run: echo steps.dependabot-metadata.outputs.dependency-type
+      - name: 'print-update-type-value'
+        run: echo steps.dependabot-metadata.outputs.update-type
+      - name: 'print-cvss-value'
+        run: echo steps.dependabot-metadata.outputs.cvss
+      - name: 'print-compatibility-score-value'
+        run: echo steps.dependabot-metadata.outputs.compatibility-score
+  trigger-slack-alert:
+    name: 'triggering-slack-alert'
+    runs-on: [self-hosted]
+    needs: [fetch-metadata]
+    continue-on-error: false
+    steps:
+      - name: 'notify-for-high-severity'
+        if: ${{ steps.dependabot-metadata.outputs.cvss >= 7.0 && steps.dependabot-metadata.outputs.cvss <= 8.9 }}
+        env:
+          SLACK_MESSAGE: 'Dependabot Alert For High Severity'
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_USERNAME: Dependabot Alert
+          SLACK_CHANNEL: tech_workflows
+          SLACK_ICON: https://avatars3.githubusercontent.com/u/9919?s=40&v=4
+        uses:  rtCamp/action-slack-notify@ca2febb266f78a54a245d815081549c522099b76
+      - name: 'notify-for-high-severity'
+        if: ${{ steps.dependabot-metadata.outputs.cvss >= 9.0 }}
+        env:
+          SLACK_MESSAGE: 'Dependabot Alert For Critical Severity'
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_USERNAME: Dependabot Alert
+          SLACK_CHANNEL: tech_workflows
+          SLACK_ICON: https://avatars3.githubusercontent.com/u/9919?s=40&v=4
+        uses:  rtCamp/action-slack-notify@ca2febb266f78a54a245d815081549c522099b76
+
